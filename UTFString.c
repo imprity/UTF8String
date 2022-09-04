@@ -88,7 +88,7 @@ uint32_t utf8_to_32(char* char_array, size_t array_size)
             }
         }
     }
-    
+
     return 0;
 }
 
@@ -268,6 +268,49 @@ size_t utf_prev(UTFString* str, size_t pos)
     return utf_sv_prev(utf_sv_from_str(str), pos);
 }
 
+void utf_set_cstr(UTFString* str, const char* to_set)
+{
+    size_t str_len = strlen(to_set);
+    size_t null_included = str_len + 1;
+
+    utf_grow(str, null_included);
+
+    memcpy(str->data, to_set, null_included);
+
+    str->data_size = str_len;
+    str->count = utf8_get_length(to_set);
+
+    utf_is_valid(str);
+}
+void utf_set_str(UTFString* str, UTFString* to_set)
+{
+    size_t str_len = to_set->data_size;
+    size_t null_included = str_len+1;
+
+    utf_grow(str, null_included);
+
+    memcpy(str->data, to_set->data, null_included);
+
+    str->data_size = str_len;
+    str->count = to_set->count;
+
+    utf_is_valid(str);
+}
+void utf_set_sv(UTFString* str, UTFStringView to_set)
+{
+    size_t str_len = to_set.data_size;
+    size_t null_included = str_len+1;
+
+    utf_grow(str, null_included);
+
+    memcpy(str->data, to_set.data, null_included);
+
+    str->data_size = str_len;
+    str->count = to_set.count;
+
+    utf_is_valid(str);
+}
+
 void utf_append_cstr(UTFString* str, const char* to_append) {
     size_t str_len = strlen(to_append);
     size_t null_included = str_len + 1;
@@ -362,7 +405,7 @@ void utf_insert_sv(UTFString* str, size_t at, UTFStringView to_insert)
     memmove(str->data + at + to_insert.data_size, str->data + at, str->data_size - at);
 
     memcpy(str->data + at, to_insert.data, str_len);
-    
+
     str->data_size += str_len;
     str->data[str->data_size] = 0;
 
@@ -380,6 +423,7 @@ void utf_erase_range(UTFString* str, size_t from, size_t to) {
     if (to - from >= str->count) {
         str->data_size = 0;
         str->count = 0;
+        str->data[0] = 0;
         return;
     }
 
@@ -387,7 +431,7 @@ void utf_erase_range(UTFString* str, size_t from, size_t to) {
 
     if(char_count <= to){to = char_count;}
     if(char_count <= from){from = char_count;}
-    
+
     str->count -= to - from;
 
     from = utf_count_to_byte(str, from);
@@ -406,7 +450,7 @@ void utf_erase_range(UTFString* str, size_t from, size_t to) {
     utf_is_valid(str);
 }
 
-void utf_erase_right(UTFString* str, size_t how_many) 
+void utf_erase_right(UTFString* str, size_t how_many)
 {
     size_t str_count = str->count;
     if (how_many >= str_count) {
@@ -419,7 +463,7 @@ void utf_erase_right(UTFString* str, size_t how_many)
     str->count -= how_many;
 
     how_many = str_count - how_many;
-    
+
     how_many = utf_count_to_byte(str, how_many);
 
     str->data_size = how_many;
@@ -455,7 +499,7 @@ void utf_erase_left(UTFString* str, size_t how_many)
 // String View Functions
 ////////////////////////////
 
-size_t utf_sv_count_to_byte(UTFStringView sv, size_t count) 
+size_t utf_sv_count_to_byte(UTFStringView sv, size_t count)
 {
     if (count == 0) {
         return 0;
@@ -480,7 +524,7 @@ size_t utf_sv_byte_to_count(UTFStringView sv, size_t byte)
             count++;
         }
     }
-    
+
     return count;
 }
 
@@ -495,7 +539,7 @@ UTFStringView utf_sv_from_str(UTFString* str) {
     return sv;
 }
 
-UTFStringView utf_sv_sub_str(UTFString* str, size_t from, size_t to) 
+UTFStringView utf_sv_sub_str(UTFString* str, size_t from, size_t to)
 {
     size_t sv_count = str->count;
     if (sv_count <= to) {
@@ -515,7 +559,7 @@ UTFStringView utf_sv_sub_str(UTFString* str, size_t from, size_t to)
     UTFStringView sv;
 
     sv.count = to - from;
-    
+
     if (from <= 0) {
         from = 0;
     }
@@ -528,16 +572,16 @@ UTFStringView utf_sv_sub_str(UTFString* str, size_t from, size_t to)
     else {
         to = utf_count_to_byte(str, to);
     }
-    
+
     sv.data_size = to - from;
     sv.data = str->data + from;
-    
+
     utf_sv_is_valid(sv);
 
     return sv;
 }
 
-UTFStringView utf_sv_sub_sv(UTFStringView str, size_t from, size_t to) 
+UTFStringView utf_sv_sub_sv(UTFStringView str, size_t from, size_t to)
 {
     size_t sv_count = str.count;
     if (sv_count <= to) {
@@ -569,7 +613,7 @@ UTFStringView utf_sv_sub_sv(UTFStringView str, size_t from, size_t to)
     else {
         to = utf_sv_count_to_byte(str, to);
     }
-    
+
 
     sv.data_size = to - from;
     sv.data = str.data + from;
@@ -893,6 +937,11 @@ bool utf_test()
 
         const char character3[] = u8"£";
         assert(0b00010100011 == utf8_to_32(character3, sizeof(character3) - 1));
+    }
+    {
+        UTFString* str = utf_from_cstr(u8"random string");
+        utf_set_cstr(str, u8"고양이");
+        assert(utf_sv_cmp(utf_sv_from_str(str), utf_sv_from_cstr(u8"고양이")));
     }
 
 

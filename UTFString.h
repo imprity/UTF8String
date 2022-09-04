@@ -43,6 +43,10 @@ size_t utf_count_right_from(UTFString* str, size_t from);
 size_t utf_next(UTFString* str, size_t pos);
 size_t utf_prev(UTFString* str, size_t pos);
 
+void utf_set_cstr(UTFString* str, const char* to_set);
+void utf_set_str(UTFString* str, UTFString* to_set);
+void utf_set_sv(UTFString* str, UTFStringView to_set);
+
 void utf_append_cstr(UTFString* str, const char* to_append);
 void utf_append_str(UTFString* str, UTFString* to_append);
 void utf_append_sv(UTFString* str, UTFStringView to_append);
