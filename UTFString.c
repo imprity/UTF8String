@@ -942,6 +942,7 @@ bool utf_test()
         UTFString* str = utf_from_cstr(u8"random string");
         utf_set_cstr(str, u8"고양이");
         assert(utf_sv_cmp(utf_sv_from_str(str), utf_sv_from_cstr(u8"고양이")));
+        utf_destroy(str);
     }
 
 
