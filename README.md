@@ -6,7 +6,7 @@ Just include it in your code and build with it.
 
 - Exmaple
 ```
-UTFString* str = utf_str_from_cstr(u8"Hello World");
+UTFString* str = utf_from_cstr(u8"Hello World");
 UTFStringView sv = utf_sv_from_str(str);
 
 UTFStringView hello = utf_sv_sub_sv(sv, 0, 5);
