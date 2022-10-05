@@ -23,74 +23,370 @@ void dump_binary(uint32_t to_dump) {
     putchar('\n');
 }
 
-uint32_t utf8_to_32(char* char_array, size_t array_size)
+
+void utf8_to_32(char* char_array, size_t array_size, uint32_t* ret_array, size_t* ret_array_size)
 {
-    uint32_t to_return = 0;
-    size_t bit_offset = 0;
-    for (int i = array_size - 1; i >= 0; i--) {
-        uint32_t tmp = 0;
-        uint8_t byte = char_array[i];
-        if ((byte & 0b11000000) == 0b10000000) {
-            tmp = byte & 0b00111111;
-            tmp = tmp << bit_offset;
-            to_return = to_return | tmp;
-            bit_offset += 6;
-        }
-        else {
+    //if ret_array_size is zero or ret_array is NULL, then calculate the array size
+    if (*ret_array_size == 0 || ret_array == NULL) {
+        size_t ret_size = 0;
+
+        for (size_t i = 0; i < array_size;) {
+            uint8_t byte = char_array[i];
             if ((byte & 0b10000000) == 0) {
-                if (array_size != 1) {
-                    fprintf(stderr, "%s:%d:ERROR: Invalid utf8\n", __FILE__, __LINE__);
-                    return 0;
-                }
-                else {
-                    return byte & 0b01111111;
-                }
+                i+=1;
             }
             else if ((byte & 0b11100000) == 0b11000000) {
-                if (array_size != 2) {
-                    fprintf(stderr, "%s:%d:ERROR: Invalid utf8\n", __FILE__, __LINE__);
-                    return 0;
-                }
-                else {
-                    tmp = byte & 0b00011111;
-                    tmp = tmp << bit_offset;
-                    to_return = to_return | tmp;
-                    return to_return;
-                }
+                i += 2;
             }
             else if ((byte & 0b11110000) == 0b11100000) {
-                if (array_size != 3) {
-                    fprintf(stderr, "%s:%d:ERROR: Invalid utf8\n", __FILE__, __LINE__);
-                    return 0;
-                }
-                else {
-                    tmp = byte & 0b00001111;
-                    tmp = tmp << bit_offset;
-                    to_return = to_return | tmp;
-                    return to_return;
-                }
+                i += 3;
             }
-            else if ((byte & 0b11111000) == 0b11110000) {
-                if (array_size != 3) {
-                    fprintf(stderr, "%s:%d:ERROR: Invalid utf8\n", __FILE__, __LINE__);
-                    return 0;
-                }
-                else {
-                    tmp = byte & 0b00000111;
-                    tmp = tmp << bit_offset;
-                    to_return = to_return | tmp;
-                    return to_return;
-                }
+            else  {
+                i += 4;
+            }
+            ret_size++;
+        }
+
+        *ret_array_size = ret_size;
+        return;
+    }
+
+    size_t ret_arr_index = 0;
+
+    for (size_t i = 0; i < array_size;) {
+        uint8_t byte = char_array[i];
+        uint32_t character = 0;
+
+        if ((byte & 0b10000000) == 0) {
+            character = byte;
+            i += 1;
+        }
+        else if ((byte & 0b11100000) == 0b11000000) {
+            character |= (char_array[i + 0] & 0b00011111) << 6;
+            character |= (char_array[i + 1] & 0b00111111) << 0;
+            i += 2;
+        }
+        else if ((byte & 0b11110000) == 0b11100000) {
+            character |= (char_array[i + 0] & 0b00001111) << 12;
+            character |= (char_array[i + 1] & 0b00111111) << 6;
+            character |= (char_array[i + 2] & 0b00111111) << 0;
+            i += 3;
+        }
+        else {
+            character |= (char_array[i + 0] & 0b00000111) << 18;
+            character |= (char_array[i + 1] & 0b00111111) << 12;
+            character |= (char_array[i + 2] & 0b00111111) << 6;
+            character |= (char_array[i + 3] & 0b00111111) << 0;
+            i += 4;
+        }
+        ret_array[ret_arr_index] = character;
+        ret_arr_index++;
+        if (ret_arr_index >= ret_array_size) {
+            break;
+        }
+    }
+}
+
+void utf16_to_32(uint16_t* char_array, size_t array_size, uint32_t* ret_array, size_t* ret_array_size)
+{
+    //if ret_array_size is zero or ret_array is NULL, then calculate the array size
+    if (*ret_array_size == 0 || ret_array == NULL) {
+        size_t ret_size = 0;
+
+        for (size_t i = 0; i < array_size;) {
+            uint16_t code = char_array[i];
+            if ((code & 0b1111110000000000) == 0b1101100000000000) { //check if it's leading surrogate
+                i += 2;
             }
             else {
-                fprintf(stderr, "%s:%d:ERROR: Invalid utf8\n", __FILE__, __LINE__);
-                return 0;
+                i += 1;
             }
+            ret_size++;
+        }
+
+        *ret_array_size = ret_size;
+        return;
+    }
+
+    size_t ret_arr_index = 0;
+
+    for (size_t i = 0; i < array_size;) {
+
+        uint16_t code = char_array[i];
+        uint32_t character = 0;
+
+        if ((code & 0b1111110000000000) == 0b1101100000000000) { //check if it's surrogate pair
+            character |= (char_array[i] - 0xD800) << 10;
+            character |= (char_array[i+1] - 0xDC00);
+            character += 0x10000;
+            i += 2;
+        }
+        else {
+            character = char_array[i];
+            i += 1;
+        }
+        ret_array[ret_arr_index] = character;
+
+        ret_arr_index++;
+        if (ret_arr_index >= ret_array_size) {
+            break;
+        }
+    }
+}
+
+void utf32_to_8(uint32_t* char_array, size_t array_size, uint8_t* ret_array, size_t* ret_array_size)
+{
+    //if ret_array_size is zero or ret_array is NULL, then calculate the array size
+    if (*ret_array_size == 0 || ret_array == NULL) {
+        size_t ret_size = 0;
+
+        for (size_t i = 0; i < array_size; i++) {
+            uint32_t code = char_array[i];
+            if (code >= 0x10000) {
+                ret_size += 4;
+            }
+            else if (code >= 0x800) {
+                ret_size += 3;
+            }
+            else if (code >= 0x80) {
+                ret_size += 2;
+            }
+            else {
+                ret_size += 1;
+            }
+        }
+
+        *ret_array_size = ret_size;
+        return;
+    }
+
+    size_t ret_arr_index = 0;
+
+    for (size_t i = 0; i < array_size; i++) {
+        uint32_t code = char_array[i];
+
+        if (code >= 0x10000) {
+            ret_array[ret_arr_index++] = 0b11110000 | ((code >> 18) & 0b00000111);
+            ret_array[ret_arr_index++] = 0b10000000 | ((code >> 12) & 0b00111111);
+            ret_array[ret_arr_index++] = 0b10000000 | ((code >> 6)  & 0b00111111);
+            ret_array[ret_arr_index++] = 0b10000000 | ((code >> 0)  & 0b00111111);
+        }
+        else if (code >= 0x800) {
+            ret_array[ret_arr_index++] = 0b11100000 | ((code >> 12) & 0b00111111);
+            ret_array[ret_arr_index++] = 0b10000000 | ((code >> 6)  & 0b00111111);
+            ret_array[ret_arr_index++] = 0b10000000 | ((code >> 0)  & 0b00111111);
+        }
+        else if (code >= 0x80) {
+            ret_array[ret_arr_index++] = 0b11000000 | ((code >> 6) & 0b00111111);
+            ret_array[ret_arr_index++] = 0b10000000 | ((code >> 0) & 0b00111111);
+        }
+        else {
+            ret_array[ret_arr_index++] = code;
+        }
+        if (ret_arr_index >= ret_array_size) {
+            break;
         }
     }
 
-    return 0;
+    return;
 }
+void utf32_to_16(uint32_t* char_array, size_t array_size, uint16_t* ret_array, size_t* ret_array_size)
+{
+    //if ret_array_size is zero or ret_array is NULL, then calculate the array size
+
+    //you might notice that we encode from U+D800 to U+DFFF to a single unpaired surrogate,
+    //this is intentional since we are not checking if utf32 string is valid
+    //we are just converting them
+
+    if (*ret_array_size == 0 || ret_array == NULL) {
+        size_t ret_size = 0;
+
+        for (size_t i = 0; i < array_size; i++) {
+            uint32_t code = char_array[i];
+            if (code >= 0x10000) {
+                ret_size += 2;
+            }
+            else {
+                ret_size += 1;
+            }
+        }
+
+        *ret_array_size = ret_size;
+        return;
+    }
+
+    size_t ret_arr_index = 0;
+
+    for (size_t i = 0; i < array_size; i++) {
+        uint32_t code = char_array[i];
+        if (code >= 0x10000) {
+            code -= 0x10000;
+            ret_array[ret_arr_index++] = (code >> 10) + 0xD800;
+            ret_array[ret_arr_index++] = (code & 0b00000000001111111111) + 0xDC00;
+        }
+        else {
+            ret_array[ret_arr_index++] = code;
+        }
+
+        if (ret_arr_index >= ret_array_size) {
+            break;
+        }
+    }
+
+    return;
+}
+
+void utf8_to_16(uint8_t* char_array, size_t array_size, uint16_t* ret_array, size_t* ret_array_size)
+{
+    //if ret_array_size is zero or ret_array is NULL, then calculate the array size
+    if (*ret_array_size == 0 || ret_array == NULL) {
+        size_t ret_size = 0;
+
+        for (size_t i = 0; i < array_size;) {
+            uint8_t byte = char_array[i];
+            if ((byte & 0b10000000) == 0) {
+                ret_size += 1;
+                i += 1;
+            }
+            else if ((byte & 0b11100000) == 0b11000000) {
+                ret_size += 1;
+                i += 2;
+            }
+            else if ((byte & 0b11110000) == 0b11100000) {
+                ret_size += 1;
+                i += 3;
+            }
+            else {
+                ret_size+=2;
+                i += 4;
+            }
+        }
+
+        *ret_array_size = ret_size;
+        return;
+    }
+
+    size_t ret_arr_index = 0;
+
+    for (size_t i = 0; i < array_size;) {
+        uint8_t byte = char_array[i];
+        uint32_t utf32_code = 0;
+
+        if ((byte & 0b10000000) == 0) {
+            utf32_code = byte;
+            i += 1;
+        }
+        else if ((byte & 0b11100000) == 0b11000000) {
+            utf32_code |= (char_array[i + 0] & 0b00011111) << 6;
+            utf32_code |= (char_array[i + 1] & 0b00111111) << 0;
+            i += 2;
+        }
+        else if ((byte & 0b11110000) == 0b11100000) {
+            utf32_code |= (char_array[i + 0] & 0b00001111) << 12;
+            utf32_code |= (char_array[i + 1] & 0b00111111) << 6;
+            utf32_code |= (char_array[i + 2] & 0b00111111) << 0;
+            i += 3;
+        }
+        else {
+            utf32_code |= (char_array[i + 0] & 0b00000111) << 18;
+            utf32_code |= (char_array[i + 1] & 0b00111111) << 12;
+            utf32_code |= (char_array[i + 2] & 0b00111111) << 6;
+            utf32_code |= (char_array[i + 3] & 0b00111111) << 0;
+            i += 4;
+        }
+
+        //convert utf32 to 16
+        if (utf32_code >= 0x10000) {
+            utf32_code -= 0x10000;
+            ret_array[ret_arr_index++] = (utf32_code >> 10) + 0xD800;
+            ret_array[ret_arr_index++] = (utf32_code & 0b00000000001111111111) + 0xDC00;
+        }
+        else {
+            ret_array[ret_arr_index++] = utf32_code;
+        }
+        
+        if (ret_arr_index >= ret_array_size) {
+            break;
+        }
+    }
+}
+
+void utf16_to_8(uint16_t* char_array, size_t array_size, uint8_t* ret_array, size_t* ret_array_size)
+{
+    //if ret_array_size is zero or ret_array is NULL, then calculate the array size
+    if (*ret_array_size == 0 || ret_array == NULL) {
+        size_t ret_size = 0;
+
+        for (size_t i = 0; i < array_size;) {
+            uint16_t code = char_array[i];
+            if ((code & 0b1111110000000000) == 0b1101100000000000) { //check if it's leading surrogate
+                i += 2;
+                ret_size+=4;
+            }
+            else {
+                if (code >= 0x0800) {
+                    ret_size += 3;
+                }
+                else if (code >= 0x080) {
+                    ret_size += 2;
+                }
+                else {
+                    ret_size += 1;
+                }
+                i += 1;
+            }
+            
+        }
+
+        *ret_array_size = ret_size;
+        return;
+    }
+
+    size_t ret_arr_index = 0;
+
+    for (size_t i = 0; i < array_size;) {
+
+        uint16_t code = char_array[i];
+        uint32_t utf32_code = 0;
+
+        if ((code & 0b1111110000000000) == 0b1101100000000000) { //check if it's surrogate pair
+            utf32_code |= (char_array[i] - 0xD800) << 10;
+            utf32_code |= (char_array[i + 1] - 0xDC00);
+            utf32_code += 0x10000;
+            i += 2;
+        }
+        else {
+            utf32_code = char_array[i];
+            i += 1;
+        }
+
+        //convert utf32 to utf8
+        if (utf32_code >= 0x10000) {
+            ret_array[ret_arr_index++] = 0b11110000 | ((utf32_code >> 18) & 0b00000111);
+            ret_array[ret_arr_index++] = 0b10000000 | ((utf32_code >> 12) & 0b00111111);
+            ret_array[ret_arr_index++] = 0b10000000 | ((utf32_code >> 6) & 0b00111111);
+            ret_array[ret_arr_index++] = 0b10000000 | ((utf32_code >> 0) & 0b00111111);
+        }
+        else if (utf32_code >= 0x800) {
+            ret_array[ret_arr_index++] = 0b11100000 | ((utf32_code >> 12) & 0b00111111);
+            ret_array[ret_arr_index++] = 0b10000000 | ((utf32_code >> 6) & 0b00111111);
+            ret_array[ret_arr_index++] = 0b10000000 | ((utf32_code >> 0) & 0b00111111);
+        }
+        else if (utf32_code >= 0x80) {
+            ret_array[ret_arr_index++] = 0b11000000 | ((utf32_code >> 6) & 0b00111111);
+            ret_array[ret_arr_index++] = 0b10000000 | ((utf32_code >> 0) & 0b00111111);
+        }
+        else {
+            ret_array[ret_arr_index++] = utf32_code;
+        }
+
+        ret_arr_index++;
+        if (ret_arr_index >= ret_array_size) {
+            break;
+        }
+    }
+}
+
 
 //https://stackoverflow.com/questions/32936646/getting-the-string-length-on-utf-8-in-c#:~:text=The%20number%20of%20code%20points,and%20stopping%20at%20'%5C0'%20.
 size_t utf8_get_length(const char* str) {
@@ -831,6 +1127,32 @@ void utf_sv_fprintln(UTFStringView sv, FILE* file)
 // Tests
 ////////////////////////////
 
+static bool utf16_strcmp(uint16_t* str1, uint16_t* str2) {
+    size_t index = 0;
+    while (str1[index] != 0 && str2[index] != 0) {
+        uint16_t char1 = str1[index];
+        uint16_t char2 = str2[index];
+        if (char1 != char2) {
+            return false;
+        }
+        index++;
+    }
+    return true;
+}
+
+static bool utf32_strcmp(uint32_t* str1, uint32_t* str2) {
+    size_t index = 0;
+    while (str1[index] != 0 && str2[index] != 0) {
+        uint32_t char1 = str1[index];
+        uint32_t char2 = str2[index];
+        if (char1 != char2) {
+            return false;
+        }
+        index++;
+    }
+    return true;
+}
+
 bool utf_test()
 {
     {
@@ -929,14 +1251,97 @@ bool utf_test()
         utf_destroy(short_str);
     }
     {
-        const char character1[] = u8"일";
-        assert(0xc77c == utf8_to_32(character1, sizeof(character1)-1));
+        ////////////////////////////////
+        // utf8_to_32 test
+        ////////////////////////////////
+        uint32_t utf32_vec[10];
+        size_t utf32_vec_size = 0;
+        
+        const char str[] = u8"a߿일😀";
+        utf8_to_32(str, sizeof(str), utf32_vec, &utf32_vec_size);
+        assert(utf32_vec_size == 5); //cause it's null terminated
+        utf8_to_32(str, sizeof(str), utf32_vec, &utf32_vec_size);
+        assert(utf32_strcmp(utf32_vec, U"a߿일😀"));
+    }
+    {
+        ////////////////////////////////
+        // utf16_to_32 test
+        ////////////////////////////////
+        uint32_t utf32_vec[10];
+        size_t utf32_vec_size = 0;
 
-        const char character2[] = u8"a";
-        assert('a' == utf8_to_32(character2, sizeof(character2) - 1));
+        const uint16_t str[] = u"a😀";
+        utf16_to_32(str, (sizeof(str) / sizeof(uint16_t)), utf32_vec, &utf32_vec_size);
+        assert(utf32_vec_size == 3); //cause it's null terminated
+        utf16_to_32(str, (sizeof(str) / sizeof(uint16_t)), utf32_vec, &utf32_vec_size);
+        assert(utf32_strcmp(utf32_vec, U"a😀"));
+    }
+    {
+        ////////////////////////////////
+        // utf32_to_8 test
+        ////////////////////////////////
+        uint8_t utf8_vec[15];
+        size_t utf8_vec_size = 0;
 
-        const char character3[] = u8"£";
-        assert(0b00010100011 == utf8_to_32(character3, sizeof(character3) - 1));
+        const uint32_t str[] = U"a߿일😀";
+        utf32_to_8(str, (sizeof(str) / sizeof(uint32_t)), utf8_vec, &utf8_vec_size);
+        assert(utf8_vec_size == 11);
+        utf32_to_8(str, (sizeof(str) / sizeof(uint32_t)), utf8_vec, &utf8_vec_size);
+        assert(strcmp(utf8_vec, u8"a߿일😀") == 0);
+        utf8_vec_size = 0;
+    }
+    {
+        ////////////////////////////////
+        // utf32_to_16 test
+        ////////////////////////////////
+        uint16_t utf16_vec[10];
+        size_t utf16_vec_size = 0;
+
+        const uint32_t str[] = U"a😀";
+        utf32_to_16(str, (sizeof(str) / sizeof(uint32_t)), utf16_vec, &utf16_vec_size);
+        assert(utf16_vec_size == 4);
+        utf32_to_16(str, (sizeof(str) / sizeof(uint32_t)), utf16_vec, &utf16_vec_size);
+        assert(utf16_strcmp(utf16_vec, u"a😀"));
+        utf16_vec_size = 0;
+    }
+    {
+        ////////////////////////////////
+        // utf8_to_32 test
+        ////////////////////////////////
+        uint32_t utf32_vec[10];
+        size_t utf32_vec_size = 0;
+
+        const char str[] = u8"a߿일😀";
+        utf8_to_32(str, sizeof(str), utf32_vec, &utf32_vec_size);
+        assert(utf32_vec_size == 5); //cause it's null terminated
+        utf8_to_32(str, sizeof(str), utf32_vec, &utf32_vec_size);
+        assert(utf32_strcmp(utf32_vec, U"a߿일😀"));
+    }
+    {
+        ////////////////////////////////
+        // utf8_to_16 test
+        ////////////////////////////////
+        uint16_t utf16_vec[10];
+        size_t utf16_vec_size = 0;
+
+        const char str[] = u8"a߿일😀";
+        utf8_to_16(str, sizeof(str), utf16_vec, &utf16_vec_size);
+        assert(utf16_vec_size == 6);
+        utf8_to_16(str, sizeof(str), utf16_vec, &utf16_vec_size);
+        assert(utf16_strcmp(utf16_vec, u"a߿일😀"));
+    }
+    {
+        ////////////////////////////////
+        // utf16_to_8 test
+        ////////////////////////////////
+        uint16_t utf8_vec[10];
+        size_t utf8_vec_size = 0;
+
+        const uint16_t str[] = u"a߿일😀";
+        utf16_to_8(str, (sizeof(str) / sizeof(uint16_t)), utf8_vec, &utf8_vec_size);
+        assert(utf8_vec_size == 11);
+        utf16_to_8(str, (sizeof(str) / sizeof(uint16_t)), utf8_vec, &utf8_vec_size);
+        assert(strcmp(utf8_vec, u8"a߿일😀"));
     }
     {
         UTFString* str = utf_from_cstr(u8"random string");
@@ -948,3 +1353,5 @@ bool utf_test()
 
     return true;
 }
+
+

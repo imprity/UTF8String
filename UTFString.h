@@ -9,7 +9,14 @@
 #include <stdio.h>
 #include <stdint.h>
 
-uint32_t utf8_to_32(char* char_array, size_t array_size);
+void utf8_to_32(char* char_array, size_t array_size, uint32_t* ret_array, size_t* ret_array_size);
+void utf16_to_32(uint16_t* char_array, size_t array_size, uint32_t* ret_array, size_t* ret_array_size);
+
+void utf32_to_8(uint32_t* char_array, size_t array_size, uint8_t* ret_array, size_t* ret_array_size);
+void utf32_to_16(uint32_t* char_array, size_t array_size, uint16_t* ret_array, size_t* ret_array_size);
+
+void utf8_to_16(uint8_t* char_array, size_t array_size, uint16_t* ret_array, size_t* ret_array_size);
+void utf16_to_8(uint16_t* char_array, size_t array_size, uint8_t* ret_array, size_t* ret_array_size);
 
 typedef struct UTFString {
     char* data;
