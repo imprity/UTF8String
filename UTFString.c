@@ -380,7 +380,6 @@ void utf16_to_8(uint16_t* char_array, size_t array_size, uint8_t* ret_array, siz
             ret_array[ret_arr_index++] = utf32_code;
         }
 
-        ret_arr_index++;
         if (ret_arr_index >= ret_array_size) {
             break;
         }
@@ -1254,7 +1253,7 @@ bool utf_test()
         ////////////////////////////////
         // utf8_to_32 test
         ////////////////////////////////
-        uint32_t utf32_vec[10];
+        uint32_t utf32_vec[16];
         size_t utf32_vec_size = 0;
         
         const char str[] = u8"a߿일😀";
@@ -1267,7 +1266,7 @@ bool utf_test()
         ////////////////////////////////
         // utf16_to_32 test
         ////////////////////////////////
-        uint32_t utf32_vec[10];
+        uint32_t utf32_vec[16];
         size_t utf32_vec_size = 0;
 
         const uint16_t str[] = u"a😀";
@@ -1280,7 +1279,7 @@ bool utf_test()
         ////////////////////////////////
         // utf32_to_8 test
         ////////////////////////////////
-        uint8_t utf8_vec[15];
+        uint8_t utf8_vec[16];
         size_t utf8_vec_size = 0;
 
         const uint32_t str[] = U"a߿일😀";
@@ -1294,7 +1293,7 @@ bool utf_test()
         ////////////////////////////////
         // utf32_to_16 test
         ////////////////////////////////
-        uint16_t utf16_vec[10];
+        uint16_t utf16_vec[16];
         size_t utf16_vec_size = 0;
 
         const uint32_t str[] = U"a😀";
@@ -1308,7 +1307,7 @@ bool utf_test()
         ////////////////////////////////
         // utf8_to_32 test
         ////////////////////////////////
-        uint32_t utf32_vec[10];
+        uint32_t utf32_vec[16];
         size_t utf32_vec_size = 0;
 
         const char str[] = u8"a߿일😀";
@@ -1321,7 +1320,7 @@ bool utf_test()
         ////////////////////////////////
         // utf8_to_16 test
         ////////////////////////////////
-        uint16_t utf16_vec[10];
+        uint16_t utf16_vec[16];
         size_t utf16_vec_size = 0;
 
         const char str[] = u8"a߿일😀";
@@ -1334,14 +1333,14 @@ bool utf_test()
         ////////////////////////////////
         // utf16_to_8 test
         ////////////////////////////////
-        uint16_t utf8_vec[10];
+        uint16_t utf8_vec[16];
         size_t utf8_vec_size = 0;
 
         const uint16_t str[] = u"a߿일😀";
         utf16_to_8(str, (sizeof(str) / sizeof(uint16_t)), utf8_vec, &utf8_vec_size);
         assert(utf8_vec_size == 11);
         utf16_to_8(str, (sizeof(str) / sizeof(uint16_t)), utf8_vec, &utf8_vec_size);
-        assert(strcmp(utf8_vec, u8"a߿일😀"));
+        assert(strcmp(utf8_vec, u8"a߿일😀") == 0);
     }
     {
         UTFString* str = utf_from_cstr(u8"random string");
