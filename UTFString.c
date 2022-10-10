@@ -172,12 +172,12 @@ void utf32_to_8(const uint32_t* char_array, size_t array_size, uint8_t* ret_arra
             ret_array[ret_arr_index++] = 0b10000000 | ((code >> 0)  & 0b00111111);
         }
         else if (code >= 0x800) {
-            ret_array[ret_arr_index++] = 0b11100000 | ((code >> 12) & 0b00111111);
+            ret_array[ret_arr_index++] = 0b11100000 | ((code >> 12) & 0b00001111);
             ret_array[ret_arr_index++] = 0b10000000 | ((code >> 6)  & 0b00111111);
             ret_array[ret_arr_index++] = 0b10000000 | ((code >> 0)  & 0b00111111);
         }
         else if (code >= 0x80) {
-            ret_array[ret_arr_index++] = 0b11000000 | ((code >> 6) & 0b00111111);
+            ret_array[ret_arr_index++] = 0b11000000 | ((code >> 6) & 0b00011111);
             ret_array[ret_arr_index++] = 0b10000000 | ((code >> 0) & 0b00111111);
         }
         else {
@@ -368,12 +368,12 @@ void utf16_to_8(const uint16_t* char_array, size_t array_size, uint8_t* ret_arra
             ret_array[ret_arr_index++] = 0b10000000 | ((utf32_code >> 0) & 0b00111111);
         }
         else if (utf32_code >= 0x800) {
-            ret_array[ret_arr_index++] = 0b11100000 | ((utf32_code >> 12) & 0b00111111);
+            ret_array[ret_arr_index++] = 0b11100000 | ((utf32_code >> 12) & 0b00001111);
             ret_array[ret_arr_index++] = 0b10000000 | ((utf32_code >> 6) & 0b00111111);
             ret_array[ret_arr_index++] = 0b10000000 | ((utf32_code >> 0) & 0b00111111);
         }
         else if (utf32_code >= 0x80) {
-            ret_array[ret_arr_index++] = 0b11000000 | ((utf32_code >> 6) & 0b00111111);
+            ret_array[ret_arr_index++] = 0b11000000 | ((utf32_code >> 6) & 0b00011111);
             ret_array[ret_arr_index++] = 0b10000000 | ((utf32_code >> 0) & 0b00111111);
         }
         else {
